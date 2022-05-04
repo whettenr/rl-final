@@ -17,18 +17,13 @@ def run(gamma, num_hidden, lr, max_eps=1000000):
     # env = gym.make("Pendulum-v1")  # Create the environment
 
     eps = np.finfo(np.float32).eps.item()  
-    print("ACTION SPACE: ", env.action_space)
-    # num_inputs = 3
-    # num_actions = 1
     num_inputs = 8
     num_actions = 4
-    # num_hidden = 12
 
     inputs = layers.Input(shape=(num_inputs,))
     common = layers.Dense(num_hidden, activation="relu")(inputs)
     action = layers.Dense(num_actions, activation="softmax")(common)
-    # action = layers.Dense(num_actions, activation="sigmoid")(common)
-    # action = layers.Dense(num_actions)(common)
+
     critic = layers.Dense(1)(common)
 
     model = keras.Model(inputs=inputs, outputs=[action, critic])
@@ -59,8 +54,6 @@ def run(gamma, num_hidden, lr, max_eps=1000000):
                 critic_value_history.append(critic_value[0, 0])
 
                 # Sample action from action probability distribution
-                # print('action_probs')
-                # print(np.squeeze(action_probs))
                 action = np.random.choice(num_actions, p=np.squeeze(action_probs))
                 # action = np.random.choice(num_actions, p=np.squeeze(action_probs))
                 action_probs_history.append(tf.math.log(action_probs[0, action]))
@@ -116,7 +109,6 @@ def run(gamma, num_hidden, lr, max_eps=1000000):
             grads = tape.gradient(loss_value, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-            print(episode_reward)
             # Clear the loss and reward history
             action_probs_history.clear()
             critic_value_history.clear()
@@ -131,24 +123,25 @@ def run(gamma, num_hidden, lr, max_eps=1000000):
         if np.mean(np.array(running_reward)) > 0:  # Condition to consider the task solved
             print("Solved at episode {}!".format(episode_count))
             return episode_count, running_reward, model
-    return episode_count, running_reward, model
+    return episode_count, np.mean(np.array(running_reward)), model
 
 
 if __name__ == '__main__':
-    hidden_n = [4, 16, 64, 128, 256]
-    gammas = [0.1, 0.3, 0.5, 0.8, 0.99]
+    hidden_n = [256]
+    gammas = [0.8, 0.99]
     lrs = [0.001, 0.01, 0.1]
     for hidden in hidden_n:
       for gamma in gammas:
         for lr in lrs:
-          for i in range(5):
+            
+          for i in range(2):
             start = time.time()
-            count, reward, model = run(gamma=gamma, num_hidden=hidden, lr=lr, max_eps=10000)
+            count, reward, model = run(gamma=gamma, num_hidden=hidden, lr=lr, max_eps=1000)
             end = time.time()
-            with open('time-acll-.txt', 'a') as f:
+            with open('time-acll.txt', 'a') as f:
                 f.write(str(hidden)+'|' + str(gamma)+'|' +str(lr)+'|'+ str(end - start) +'|' + str(count) + '|' + str(reward) + "\n")
                 f.close()
-            model.save('models/acll-' + str(hidden)+ '-' + str(gamma)+ '-' +str(lr)+ '-' + str(i))
+            # model.save('models/acll-' + str(hidden)+ '-' + str(gamma)+ '-' +str(lr)+ '-' + str(i))
 
 
 

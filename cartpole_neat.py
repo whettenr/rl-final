@@ -17,10 +17,10 @@ import visualize
 
 # env = gym.make("LunarLander-v2")
 
-seed = 5
+# seed = 5
 gamma = 0.90  # Discount factor for past rewards
 env = gym.make("CartPole-v1")  # Create the environment
-env.seed(seed)
+# env.seed(seed)
 
 print("action space: {0!r}".format(env.action_space))
 print("observation space: {0!r}".format(env.observation_space))
@@ -128,7 +128,7 @@ class PooledErrorCompute(object):
 
         print("final fitness compute time {0}\n".format(time.time() - t0))
 
-def run(config_file = ''):
+def run(config_file = '', limit=1000):
     # Load the config file, which is assumed to live in
     # the same directory as this script.
     local_dir = os.path.dirname(__file__)
@@ -147,7 +147,7 @@ def run(config_file = ''):
     # Run until the winner from a generation is able to solve the environment
     # or the user interrupts the process.
     ec = PooledErrorCompute()
-    while 1:
+    for i in range(limit):
         try:
             pop.run(ec.evaluate_genomes, 1)
 
@@ -190,7 +190,7 @@ def run(config_file = ''):
                     best_action = np.argmax(total_rewards)
                     observation, reward, done, info = env.step(best_action)
                     score += reward
-                    env.render()
+                    # env.render()
                     if done:
                         break
 
@@ -206,35 +206,34 @@ def run(config_file = ''):
 
                 # Save the winners.
                 for n, g in enumerate(best_genomes):
-                    name = 'cp-winner-{0}'.format(n)
+                    name = config_file + 'cp-winner-{0}'.format(n)
                     with open(name+'.pickle', 'wb') as f:
                         pickle.dump(g, f)
 
-                    visualize.draw_net(config, g, view=False, filename=name + "-net.gv")
-                    visualize.draw_net(config, g, view=False, filename="-net-enabled.gv",
-                                       show_disabled=False)
-                    visualize.draw_net(config, g, view=False, filename="-net-enabled-pruned.gv",
-                                       show_disabled=False, prune_unused=True)
-
-                break
+                    # visualize.draw_net(config, g, view=False, filename=name + "-net.gv")
+                    # visualize.draw_net(config, g, view=False, filename="-net-enabled.gv",
+                    #                    show_disabled=False)
+                    # visualize.draw_net(config, g, view=False, filename="-net-enabled-pruned.gv",
+                    #                    show_disabled=False, prune_unused=True)
+                env.close()
+                return i, avg_score
         except KeyboardInterrupt:
             print("User break.")
             break
-
+    
     env.close()
-
+    return i, avg_score
 
 if __name__ == '__main__':
     pop_sizes = [10, 50, 100, 150, 200]
-    response_mutate_rate = [0.0, 0.1, 0.5, 0.7, 0.9]
-    bias_mutate_rate = [0.0, 0.1, 0.5, 0.7, 0.9]
-    for pop in pop_sizes:
-      for res in response_mutate_rate:
-        for bias in bias_mutate_rate:
-          for i in range(5):
-            start = time.time()
-            run(config_file = 'config_files/config-cp-'+str(pop)+'-'+str(res*100)+'-'+str(bias*100)+'.txt')
-            end = time.time()
-            with open('time-cp-.txt', 'a') as f:
-                f.write(str(pop)+','+str(res*100)+','+str(bias*100)+',' + str(end - start) + "\n")
-                f.close()
+    mutate_rates = [0.01, 0.1, 0.5]
+
+    for pop_size in pop_sizes:
+        for mutate_rate in mutate_rates:
+            for i in range(2):
+                start = time.time()
+                count, score = run(config_file = 'config_files/config-cp-'+str(pop_size)+'-'+str(mutate_rate*100)+'.txt')
+                end = time.time()
+                with open('time-cp-neat.txt', 'a') as f:
+                    f.write(str(pop_size)+','+str(mutate_rate*100)+','+str(count) +','+ ','+str(score) +','+ str(end - start) + "\n")
+                    f.close()
